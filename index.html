@@ -1,618 +1,474 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Koyun Ahırı Simülatörü - URL & Overlay Sürümü</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body {
-      background: #120d0a;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      overflow: hidden;
-      color: #fff;
-    }
-    body.transparent-bg,
-    body.transparent-bg .stream-frame {
-      background: transparent !important;
-      box-shadow: none !important;
-    }
-    .stream-frame {
-      position: relative;
-      width: 405px;
-      height: 720px;
-      background: linear-gradient(180deg, #5c2d12 0%, #8a4318 25%, #3d6b2c 26%, #2f5721 100%);
-      border-radius: 18px;
-      border: 3px solid #d97706;
-      overflow: hidden;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.7);
-    }
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-    .hud {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      right: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      pointer-events: none;
-      z-index: 10;
-    }
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(45, 22, 8, 0.88);
-      border: 1.5px solid #f59e0b;
-      border-radius: 12px;
-      padding: 8px 12px;
-    }
-    .title-box h1 { font-size: 15px; color: #fde68a; letter-spacing: 0.4px; }
-    .title-box p { font-size: 11px; color: #fed7aa; margin-top: 2px; }
-    .badge-katil {
-      background: #10b981;
-      color: #052e16;
-      font-weight: 800;
-      padding: 1px 6px;
-      border-radius: 5px;
-    }
-    .stats { display: flex; gap: 6px; }
-    .stat-pill {
-      background: rgba(0,0,0,0.45);
-      border: 1px solid rgba(251, 191, 36, 0.4);
-      border-radius: 9px;
-      padding: 4px 9px;
-      text-align: center;
-      min-width: 52px;
-    }
-    .stat-pill span { display: block; font-size: 9px; color: #fcd34d; font-weight: 700; }
-    .stat-pill strong { font-size: 15px; color: #fff; }
-    .ram-card {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: linear-gradient(90deg, rgba(180, 83, 9, 0.92), rgba(217, 119, 6, 0.92));
-      border: 1.5px solid #fde047;
-      border-radius: 12px;
-      padding: 7px 11px;
-    }
-    .ram-info { font-size: 11px; }
-    .ram-tag {
-      background: #fef08a;
-      color: #713f12;
-      font-weight: 800;
-      padding: 1px 6px;
-      border-radius: 5px;
-      font-size: 10px;
-      margin-right: 4px;
-    }
-    .ram-name { font-weight: 800; font-size: 13px; color: #fff; }
-    .ram-sub { font-size: 10px; color: #fef3c7; margin-top: 2px; }
-    .speed-badge {
-      background: rgba(0,0,0,0.35);
-      border: 1px solid #fde047;
-      color: #fef08a;
-      font-weight: 800;
-      font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 8px;
-    }
-    .leaders-bar {
-      background: rgba(28, 15, 7, 0.85);
-      border: 1px solid rgba(251, 191, 36, 0.35);
-      border-radius: 9px;
-      padding: 5px 10px;
-      font-size: 11px;
-      color: #fde68a;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .banner {
-      position: absolute;
-      top: 158px;
-      left: 16px;
-      right: 16px;
-      background: rgba(17, 24, 39, 0.92);
-      border: 2px solid #facc15;
-      border-radius: 12px;
-      padding: 9px 12px;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 700;
-      color: #fef08a;
-      opacity: 0;
-      transform: translateY(-8px);
-      transition: all 0.25s ease;
-      pointer-events: none;
-      z-index: 15;
-    }
-    .banner.show { opacity: 1; transform: translateY(0); }
-    .gear-btn {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 2px solid #fbbf24;
-      background: rgba(30, 20, 12, 0.92);
-      color: #fff;
-      font-size: 19px;
-      cursor: pointer;
-      z-index: 40;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .settings-panel {
-      position: absolute;
-      right: 12px;
-      left: 12px;
-      top: 155px;
-      background: rgba(24, 16, 10, 0.98);
-      border: 2px solid #f59e0b;
-      border-radius: 14px;
-      padding: 13px;
-      z-index: 50;
-      display: none;
-      flex-direction: column;
-      gap: 9px;
-    }
-    .settings-panel.open { display: flex; }
-    .settings-panel h3 { font-size: 13px; color: #fcd34d; display: flex; justify-content: space-between; align-items: center; }
-    .row { display: flex; gap: 6px; }
-    input[type="text"] {
-      flex: 1;
-      padding: 6px 8px;
-      border-radius: 8px;
-      border: 1px solid #78350f;
-      background: #29180d;
-      color: #fff;
-      font-size: 11px;
-    }
-    button.btn {
-      padding: 6px 9px;
-      border-radius: 8px;
-      border: none;
-      font-weight: 700;
-      font-size: 11px;
-      cursor: pointer;
-    }
-    .btn-green { background: #10b981; color: #052e16; }
-    .btn-amber { background: #f59e0b; color: #271300; }
-    .btn-red { background: #ef4444; color: #fff; }
-    .status-line { font-size: 10.5px; color: #d1d5db; }
-    .url-box {
-      background: #1c1008;
-      border: 1px dashed #f59e0b;
-      border-radius: 8px;
-      padding: 7px;
-      font-size: 10px;
-      color: #fde68a;
-      word-break: break-all;
-    }
-    .bottom-controls {
-      position: absolute;
-      bottom: 12px;
-      left: 10px;
-      right: 10px;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      z-index: 40;
-    }
-    .hidden-ui { display: none !important; }
-    .test-btn {
-      background: rgba(28, 17, 10, 0.95);
-      border: 1.5px solid #d97706;
-      border-radius: 10px;
-      padding: 7px 4px;
-      color: #fff;
-      cursor: pointer;
-      text-align: center;
-      transition: transform 0.1s ease, background 0.15s ease;
-    }
-    .test-btn:active { transform: scale(0.95); }
-    .test-btn:hover { background: rgba(69, 39, 18, 0.98); }
-    .test-btn .icon { font-size: 14px; display: block; margin-bottom: 2px; pointer-events: none; }
-    .test-btn .lbl { font-size: 10px; font-weight: 800; color: #fde68a; display: block; pointer-events: none; }
-    .test-btn .sub { font-size: 9px; color: #fed7aa; display: block; pointer-events: none; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Koyun Ahırı Simülatörü</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+body{background:#120d0a;display:flex;justify-content:center;align-items:center;min-height:100vh;overflow:hidden;color:#fff}
+body.transparent-bg,body.transparent-bg .stream-frame{background:transparent!important;box-shadow:none!important}
+.stream-frame{position:relative;width:405px;height:720px;background:linear-gradient(180deg,#5c2d12 0%,#8a4318 25%,#3d6b2c 26%,#2f5721 100%);border-radius:18px;border:3px solid #d97706;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.7)}
+canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;top:12px;left:12px;right:12px;display:flex;flex-direction:column;gap:8px;pointer-events:none;z-index:10}
+.top-bar{display:flex;justify-content:space-between;align-items:center;background:rgba(45,22,8,.88);border:1.5px solid #f59e0b;border-radius:12px;padding:8px 12px}
+.title-box h1{font-size:15px;color:#fde68a}
+.title-box p{font-size:11px;color:#fed7aa;margin-top:2px}
+.badge-katil{background:#10b981;color:#052e16;font-weight:800;padding:1px 6px;border-radius:5px}
+.stats{display:flex;gap:6px}
+.stat-pill{background:rgba(0,0,0,.45);border:1px solid rgba(251,191,36,.4);border-radius:9px;padding:4px 9px;text-align:center;min-width:52px}
+.stat-pill span{display:block;font-size:9px;color:#fcd34d;font-weight:700}
+.stat-pill strong{font-size:15px}
+.ram-card{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(180,83,9,.92),rgba(217,119,6,.92));border:1.5px solid #fde047;border-radius:12px;padding:7px 11px}
+.ram-tag{background:#fef08a;color:#713f12;font-weight:800;padding:1px 6px;border-radius:5px;font-size:10px;margin-right:4px}
+.ram-name{font-weight:800;font-size:13px}
+.ram-sub{font-size:10px;color:#fef3c7;margin-top:2px}
+.speed-badge{background:rgba(0,0,0,.35);border:1px solid #fde047;color:#fef08a;font-weight:800;font-size:11px;padding:4px 8px;border-radius:8px}
+.leaders-bar{background:rgba(28,15,7,.85);border:1px solid rgba(251,191,36,.35);border-radius:9px;padding:5px 10px;font-size:11px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.banner{position:absolute;top:158px;left:16px;right:16px;background:rgba(17,24,39,.92);border:2px solid #facc15;border-radius:12px;padding:9px 12px;text-align:center;font-size:13px;font-weight:700;color:#fef08a;opacity:0;transform:translateY(-8px);transition:all .25s ease;pointer-events:none;z-index:15}
+.banner.show{opacity:1;transform:translateY(0)}
+.gear-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;border:2px solid #fbbf24;background:rgba(30,20,12,.92);color:#fff;font-size:19px;cursor:pointer;z-index:40;display:flex;align-items:center;justify-content:center}
+.settings-panel{position:absolute;right:12px;left:12px;top:155px;background:rgba(24,16,10,.98);border:2px solid #f59e0b;border-radius:14px;padding:13px;z-index:50;display:none;flex-direction:column;gap:9px}
+.settings-panel.open{display:flex}
+.settings-panel h3{font-size:13px;color:#fcd34d;display:flex;justify-content:space-between;align-items:center}
+.row{display:flex;gap:6px}
+input[type=text]{flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid #78350f;background:#29180d;color:#fff;font-size:11px}
+button.btn{padding:6px 9px;border-radius:8px;border:none;font-weight:700;font-size:11px;cursor:pointer}
+.btn-green{background:#10b981;color:#052e16}
+.btn-amber{background:#f59e0b;color:#271300}
+.btn-red{background:#ef4444;color:#fff}
+.status-line{font-size:10.5px;color:#d1d5db}
+.url-box{background:#1c1008;border:1px dashed #f59e0b;border-radius:8px;padding:7px;font-size:10px;color:#fde68a;word-break:break-all}
+.bottom-controls{position:absolute;bottom:12px;left:10px;right:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;z-index:40}
+.hidden-ui{display:none!important}
+.test-btn{background:rgba(28,17,10,.95);border:1.5px solid #d97706;border-radius:10px;padding:7px 4px;color:#fff;cursor:pointer;text-align:center;transition:transform .1s,background .15s}
+.test-btn:active{transform:scale(.95)}
+.test-btn:hover{background:rgba(69,39,18,.98)}
+.test-btn span{display:block;pointer-events:none}
+.test-btn .icon{font-size:14px;margin-bottom:2px}
+.test-btn .lbl{font-size:10px;font-weight:800;color:#fde68a}
+.test-btn .sub{font-size:9px;color:#fed7aa}
+</style>
 </head>
 <body>
-  <div class="stream-frame">
-    <canvas id="barnCanvas" width="405" height="720"></canvas>
+<div class="stream-frame">
+  <canvas id="barnCanvas" width="405" height="720"></canvas>
 
-    <div class="hud">
-      <div class="top-bar">
-        <div class="title-box">
-          <h1>🐑 KOYUN AHIRI</h1>
-          <p>Yoruma <span class="badge-katil">KATIL</span> yaz!</p>
-        </div>
-        <div class="stats">
-          <div class="stat-pill"><span>SÜRÜ</span><strong id="sheepCount">0</strong></div>
-          <div class="stat-pill"><span>BEĞENİ</span><strong id="likeCount">0</strong></div>
-        </div>
+  <div class="hud">
+    <div class="top-bar">
+      <div class="title-box">
+        <h1>🐑 KOYUN AHIRI</h1>
+        <p>Yoruma <span class="badge-katil">KATIL</span> yaz!</p>
       </div>
-
-      <div class="ram-card">
-        <div class="ram-info">
-          <div><span class="ram-tag">👑 ERKEK KOÇ</span> <span class="ram-name" id="ramName">Kral Karabaş</span></div>
-          <div class="ram-sub" id="ramOwner">Sahibi: @Sahipsiz • Aslan / Taç at, ismini ver!</div>
-        </div>
-        <div class="speed-badge" id="speedBadge">1x Hız</div>
+      <div class="stats">
+        <div class="stat-pill"><span>SÜRÜ</span><strong id="sheepCount">0</strong></div>
+        <div class="stat-pill"><span>BEĞENİ</span><strong id="likeCount">0</strong></div>
       </div>
-
-      <div class="leaders-bar" id="leadersBar">🏆 LİDERLER: Henüz katılan yok...</div>
     </div>
-
-    <div class="banner" id="bannerBox">Hoş geldin!</div>
-
-    <button type="button" class="gear-btn" id="gearBtn" title="Yayıncı Ayarları">⚙️</button>
-
-    <div class="settings-panel" id="settingsPanel">
-      <h3>
-        <span>⚙️ URL & TikFinity Ayarları</span>
-        <button type="button" class="btn btn-red" id="closeSettingsBtn">Kapat</button>
-      </h3>
-      <div class="row">
-        <input type="text" id="wsUrlInput" value="ws://localhost:21213/" />
-        <button type="button" class="btn btn-green" id="wsConnectBtn">Bağlan</button>
+    <div class="ram-card">
+      <div>
+        <div><span class="ram-tag">👑 ERKEK KOÇ</span><span class="ram-name" id="ramName">Kral Karabaş</span></div>
+        <div class="ram-sub" id="ramOwner">Sahibi: @Sahipsiz • Aslan / Taç at, ismini ver!</div>
       </div>
-      <div class="status-line" id="wsStatus">Durum: Bağlı değil</div>
-      <div class="row">
-        <input type="text" id="customUserInput" placeholder="Test kullanıcı adı" />
-        <button type="button" class="btn btn-amber" id="customJoinBtn">Katıl Ekle</button>
-      </div>
-      <div class="row">
-        <button type="button" class="btn btn-green" id="toggleSoundBtn">🔊 Ses: AÇIK</button>
-        <button type="button" class="btn btn-red" id="resetBarnBtn">Sıfırla</button>
-      </div>
-      <div class="status-line">TikTok Live Studio Bağlantı (Overlay) URL'si:</div>
-      <div class="url-box" id="generatedUrlBox"></div>
-      <button type="button" class="btn btn-amber" id="copyOverlayUrlBtn">🔗 Yayın Bağlantı URL'sini Kopyala</button>
+      <div class="speed-badge" id="speedBadge">1x Hız</div>
     </div>
-
-    <div class="bottom-controls" id="bottomControls">
-      <button type="button" class="test-btn" id="btnTestJoin">
-        <span class="icon">💬</span>
-        <span class="lbl">"KATIL"</span>
-        <span class="sub">Koyun Al</span>
-      </button>
-      <button type="button" class="test-btn" id="btnTestLike">
-        <span class="icon">❤️</span>
-        <span class="lbl">BEĞENİ</span>
-        <span class="sub">Otla Besle</span>
-      </button>
-      <button type="button" class="test-btn" id="btnTestGift">
-        <span class="icon">🌹</span>
-        <span class="lbl">HEDİYE</span>
-        <span class="sub">Büyüt & Doğur</span>
-      </button>
-      <button type="button" class="test-btn" id="btnTestRam">
-        <span class="icon">👑</span>
-        <span class="lbl">ASLAN/TAÇ</span>
-        <span class="sub">Koça İsim Ver</span>
-      </button>
-    </div>
+    <div class="leaders-bar" id="leadersBar">🏆 LİDERLER: Henüz katılan yok...</div>
   </div>
 
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const params = new URLSearchParams(window.location.search);
-      const paramWs = params.get('ws') || 'ws://localhost:21213/';
-      const paramAutoWs = params.get('autows') === '1';
-      const paramTransparent = params.get('transparent') === '1';
-      const paramHideControls = params.get('hidecontrols') === '1';
-      const paramRamName = params.get('ram') || 'Kral Karabaş';
-      const paramSound = params.get('sound') !== '0';
+  <div class="banner" id="bannerBox">Hoş geldin!</div>
+  <button type="button" class="gear-btn" id="gearBtn" title="Yayıncı Ayarları">⚙️</button>
 
-      if (paramTransparent) {
-        document.body.classList.add('transparent-bg');
-      }
-      if (paramHideControls) {
-        document.getElementById('bottomControls').classList.add('hidden-ui');
-        document.getElementById('gearBtn').classList.add('hidden-ui');
-      }
+  <div class="settings-panel" id="settingsPanel">
+    <h3><span>⚙️ URL &amp; TikFinity Ayarları</span><button type="button" class="btn btn-red" id="closeSettingsBtn">Kapat</button></h3>
+    <div class="row">
+      <input type="text" id="wsUrlInput" value="ws://localhost:21213/" />
+      <button type="button" class="btn btn-green" id="wsConnectBtn">Bağlan</button>
+    </div>
+    <div class="status-line" id="wsStatus">Durum: Bağlı değil</div>
+    <div class="row">
+      <input type="text" id="customUserInput" placeholder="Test kullanıcı adı" />
+      <button type="button" class="btn btn-amber" id="customJoinBtn">Katıl Ekle</button>
+    </div>
+    <div class="row">
+      <button type="button" class="btn btn-green" id="toggleSoundBtn">🔊 Ses: AÇIK</button>
+      <button type="button" class="btn btn-red" id="resetBarnBtn">Sıfırla</button>
+    </div>
+    <div class="status-line">TikTok Live Studio Bağlantı (Overlay) URL'si:</div>
+    <div class="url-box" id="generatedUrlBox"></div>
+    <button type="button" class="btn btn-amber" id="copyOverlayUrlBtn">🔗 Yayın Bağlantı URL'sini Kopyala</button>
+  </div>
 
-      const canvas = document.getElementById('barnCanvas');
-      const ctx = canvas.getContext('2d');
+  <div class="bottom-controls" id="bottomControls">
+    <button type="button" class="test-btn" id="btnTestJoin"><span class="icon">💬</span><span class="lbl">"KATIL"</span><span class="sub">Koyun Al</span></button>
+    <button type="button" class="test-btn" id="btnTestLike"><span class="icon">❤️</span><span class="lbl">BEĞENİ</span><span class="sub">Otla Besle</span></button>
+    <button type="button" class="test-btn" id="btnTestGift"><span class="icon">🌹</span><span class="lbl">HEDİYE</span><span class="sub">Büyüt &amp; Doğur</span></button>
+    <button type="button" class="test-btn" id="btnTestRam"><span class="icon">👑</span><span class="lbl">ASLAN/TAÇ</span><span class="sub">Koça İsim Ver</span></button>
+  </div>
+</div>
 
-      const sheepCountEl = document.getElementById('sheepCount');
-      const likeCountEl = document.getElementById('likeCount');
-      const ramNameEl = document.getElementById('ramName');
-      const ramOwnerEl = document.getElementById('ramOwner');
-      const speedBadgeEl = document.getElementById('speedBadge');
-      const leadersBarEl = document.getElementById('leadersBar');
-      const bannerBox = document.getElementById('bannerBox');
-      const wsUrlInput = document.getElementById('wsUrlInput');
-      wsUrlInput.value = paramWs;
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(window.location.search);
+  var paramWs = params.get('ws') || 'ws://localhost:21213/';
+  var paramAutoWs = params.get('autows') === '1';
+  var paramTransparent = params.get('transparent') === '1';
+  var paramHideControls = params.get('hidecontrols') === '1';
+  var paramRamName = params.get('ram') || 'Kral Karabaş';
+  var soundEnabled = params.get('sound') !== '0';
 
-      let soundEnabled = paramSound;
-      let totalLikes = 0;
-      let speedMultiplier = 1;
-      let socket = null;
-      let bannerTimer = null;
+  if (paramTransparent) document.body.classList.add('transparent-bg');
+  if (paramHideControls) {
+    $('bottomControls').classList.add('hidden-ui');
+    $('gearBtn').classList.add('hidden-ui');
+  }
 
-      const sampleNames = ['Ayse_34', 'MehmetKral', 'Zeynep06', 'CanerBey', 'ElifNur', 'Burak_TR', 'Selinay', 'EmreCan', 'MerveYilmaz', 'KaanAbi'];
-      let sampleIndex = 0;
+  var canvas = $('barnCanvas');
+  var ctx = canvas.getContext('2d');
+  var wsUrlInput = $('wsUrlInput');
+  wsUrlInput.value = paramWs;
 
-      const ram = {
-        x: 202,
-        y: 350,
-        vx: 0.7,
-        vy: 0.4,
-        name: paramRamName,
-        owner: 'Sahipsiz',
-        hasOwner: false
-      };
+  var totalLikes = 0, speedMultiplier = 1, socket = null, bannerTimer = null, sampleIndex = 0;
+  var sampleNames = ['Ayse_34','MehmetKral','Zeynep06','CanerBey','ElifNur','Burak_TR','Selinay','EmreCan','MerveYilmaz','KaanAbi'];
+  var ram = { x: 202, y: 350, vx: 0.7, vy: 0.4, name: paramRamName, owner: 'Sahipsiz', hasOwner: false };
+  var sheepList = [], grasses = [], lambs = [];
 
-      const sheepList = [];
-      const grasses = [];
-      const lambs = [];
+  function cleanUser(u) { return String(u || '').trim().replace(/^@/, ''); }
 
-      function buildOverlayUrl() {
-        const base = window.location.origin + window.location.pathname;
-        const wsEncoded = encodeURIComponent(wsUrlInput.value.trim() || 'ws://localhost:21213/');
-        return `${base}?autows=1&transparent=1&hidecontrols=1&ws=${wsEncoded}`;
-      }
+  function buildOverlayUrl() {
+    var base = window.location.origin + window.location.pathname;
+    var ws = encodeURIComponent(wsUrlInput.value.trim() || 'ws://localhost:21213/');
+    return base + '?autows=1&transparent=1&hidecontrols=1&ws=' + ws;
+  }
+  function refreshGeneratedUrl() { $('generatedUrlBox').textContent = buildOverlayUrl(); }
 
-      function refreshGeneratedUrl() {
-        document.getElementById('generatedUrlBox').textContent = buildOverlayUrl();
-      }
+  function showBanner(text) {
+    var b = $('bannerBox');
+    b.textContent = text;
+    b.classList.add('show');
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(function () { b.classList.remove('show'); }, 3200);
+  }
 
-      function showBanner(text) {
-        bannerBox.textContent = text;
-        bannerBox.classList.add('show');
-        clearTimeout(bannerTimer);
-        bannerTimer = setTimeout(() => {
-          bannerBox.classList.remove('show');
-        }, 3200);
-      }
+  function speakText(text) {
+    if (!soundEnabled || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = 'tr-TR'; u.rate = 1.02; u.pitch = 1.05;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
 
-      function speakText(text) {
-        if (!soundEnabled || !('speechSynthesis' in window)) return;
-        try {
-          window.speechSynthesis.cancel();
-          const utter = new SpeechSynthesisUtterance(text);
-          utter.lang = 'tr-TR';
-          utter.rate = 1.02;
-          utter.pitch = 1.05;
-          window.speechSynthesis.speak(utter);
-        } catch (e) {}
-      }
+  function updateHUD() {
+    $('sheepCount').textContent = sheepList.length + lambs.length;
+    $('likeCount').textContent = totalLikes;
+    $('ramName').textContent = ram.name;
+    $('ramOwner').textContent = ram.hasOwner
+      ? 'Sahibi: @' + ram.owner + ' • Aktif Lider Koç'
+      : 'Sahibi: @Sahipsiz • Aslan / Taç at, ismini ver!';
+    $('speedBadge').textContent = speedMultiplier + 'x Hız';
+    if (!sheepList.length) {
+      $('leadersBar').textContent = '🏆 LİDERLER: Henüz katılan yok...';
+    } else {
+      var sorted = sheepList.slice().sort(function (a, b) { return (b.growth + b.babies * 100) - (a.growth + a.babies * 100); });
+      var top = sorted.slice(0, 3).map(function (s, i) {
+        return (i + 1) + '.' + s.owner + '(%' + Math.min(100, Math.round(s.growth)) + ')';
+      }).join('  ');
+      $('leadersBar').textContent = '🏆 LİDERLER: ' + top;
+    }
+  }
 
-      function updateHUD() {
-        sheepCountEl.textContent = sheepList.length + lambs.length;
-        likeCountEl.textContent = totalLikes;
-        ramNameEl.textContent = ram.name;
-        ramOwnerEl.textContent = ram.hasOwner
-          ? `Sahibi: @${ram.owner} • Aktif Lider Koç`
-          : 'Sahibi: @Sahipsiz • Aslan / Taç at, ismini ver!';
-        speedBadgeEl.textContent = `${speedMultiplier}x Hız`;
+  function findSheep(name) {
+    var n = name.toLowerCase();
+    return sheepList.filter(function (s) { return s.owner.toLowerCase() === n; })[0];
+  }
 
-        if (sheepList.length === 0) {
-          leadersBarEl.textContent = '🏆 LİDERLER: Henüz katılan yok...';
-        } else {
-          const sorted = [...sheepList].sort((a, b) => (b.growth + b.babies * 100) - (a.growth + a.babies * 100));
-          const top3 = sorted.slice(0, 3).map((s, idx) => `${idx + 1}.${s.owner}(%${Math.min(100, Math.round(s.growth))})`).join('  ');
-          leadersBarEl.textContent = `🏆 LİDERLER: ${top3}`;
-        }
-      }
+  function checkBirth(s) {
+    if (s.growth >= 100) {
+      s.growth = 25;
+      s.babies += 1;
+      lambs.push({ parent: s, x: s.x - 18, y: s.y + 12 });
+      showBanner('🍼 @' + s.owner + ' adlı oyuncunun koyunu DOĞUM YAPTI! (+1 Kuzu)');
+      speakText('Tebrikler ' + s.owner + ', koyunun doğum yaptı ve bir kuzun oldu!');
+    }
+  }
 
-      function addSheep(username) {
-        const cleanName = (username || 'Misafir').trim().replace(/^@/, '');
-        const existing = sheepList.find(s => s.owner.toLowerCase() === cleanName.toLowerCase());
-        if (existing) {
-          existing.growth += 15;
-          checkBirth(existing);
-          showBanner(`🐑 @${cleanName} koyununu besledi!`);
+  function addSheep(username) {
+    var name = cleanUser(username) || 'Misafir';
+    var ex = findSheep(name);
+    if (ex) {
+      ex.growth += 15;
+      checkBirth(ex);
+      showBanner('🐑 @' + name + ' koyununu besledi!');
+      updateHUD();
+      return;
+    }
+    sheepList.push({
+      owner: name,
+      x: 60 + Math.random() * 285,
+      y: 230 + Math.random() * 380,
+      vx: (Math.random() - 0.5) * 1.6,
+      vy: (Math.random() - 0.5) * 1.2,
+      growth: 20, babies: 0, color: '#fffbeb'
+    });
+    showBanner('🎉 Hoş geldin @' + name + ', koyunun ahıra girdi!');
+    speakText('Hoş geldin ' + name + ', koyunun ahıra katıldı!');
+    updateHUD();
+  }
+
+  function dropGrass(count) {
+    count = count || 4;
+    totalLikes += count;
+    for (var i = 0; i < count; i++) {
+      grasses.push({ x: 35 + Math.random() * 335, y: 220 + Math.random() * 410, value: 14 * speedMultiplier });
+    }
+    if (grasses.length > 150) grasses.splice(0, grasses.length - 150);
+    updateHUD();
+  }
+
+  function feedWithGift(username, boost) {
+    boost = boost || 45;
+    var name = cleanUser(username);
+    var target = name ? findSheep(name) : null;
+    if (!target && !name && sheepList.length) target = sheepList[Math.floor(Math.random() * sheepList.length)];
+    if (!target) {
+      addSheep(name || 'HediyeSever');
+      target = findSheep(name || 'HediyeSever');
+    }
+    target.growth += boost * speedMultiplier;
+    showBanner('🎁 @' + target.owner + ' hediye ile koyununu büyüttü! (%' + Math.min(100, Math.round(target.growth)) + ')');
+    checkBirth(target);
+    updateHUD();
+  }
+
+  function claimRam(username, customName) {
+    var name = cleanUser(username) || 'KralOyuncu';
+    ram.owner = name;
+    ram.hasOwner = true;
+    ram.name = customName || (name + "'in Koçu");
+    speedMultiplier = 2;
+    showBanner('👑 @' + name + ' ERKEK KOÇU SAHİPLENDİ! Yeni adı: ' + ram.name + ' (2x Hız)');
+    speakText('Muhteşem! ' + name + ' erkek koça kendi adını verdi. Tüm ahır artık iki kat hızlı büyüyor!');
+    updateHUD();
+  }
+
+  function drawAnimal(x, y, scale, wool, head, label, growth, isRam) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(0, 18, 22, 7, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = head;
+    ctx.fillRect(-13, 10, 4, 10); ctx.fillRect(-4, 10, 4, 10);
+    ctx.fillRect(6, 10, 4, 10); ctx.fillRect(13, 10, 4, 10);
+
+    ctx.fillStyle = wool;
+    ctx.beginPath();
+    ctx.arc(-8, 0, 13, 0, Math.PI * 2);
+    ctx.arc(4, -2, 15, 0, Math.PI * 2);
+    ctx.arc(13, 2, 11, 0, Math.PI * 2);
+    ctx.arc(0, 6, 13, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = head;
+    ctx.beginPath(); ctx.ellipse(19, -3, 8, 7, 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(21, -5, 2, 0, Math.PI * 2); ctx.fill();
+
+    if (isRam) {
+      ctx.strokeStyle = '#d97706'; ctx.lineWidth = 3.5;
+      ctx.beginPath(); ctx.arc(15, -9, 7, Math.PI * 0.8, Math.PI * 2.1); ctx.stroke();
+      ctx.beginPath(); ctx.arc(22, -9, 6, Math.PI * 0.9, Math.PI * 2.2); ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.save();
+    if (growth !== null && growth !== undefined) {
+      var w = 34, pct = Math.min(100, growth) / 100;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(x - w / 2, y - 34 * scale - 8, w, 5);
+      ctx.fillStyle = pct >= 0.8 ? '#facc15' : '#4ade80';
+      ctx.fillRect(x - w / 2, y - 34 * scale - 8, w * pct, 5);
+    }
+    ctx.font = (isRam ? 'bold 11px' : 'bold 10px') + ' Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+    ctx.strokeText(label, x, y + 30 * scale + 8);
+    ctx.fillStyle = isRam ? '#fde047' : '#ffffff';
+    ctx.fillText(label, x, y + 30 * scale + 8);
+    ctx.restore();
+  }
+
+  function drawBarn() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!paramTransparent) {
+      ctx.fillStyle = '#5c2d12';
+      ctx.fillRect(0, 0, canvas.width, 195);
+      ctx.fillStyle = '#3e1d0b';
+      for (var i = 0; i < canvas.width; i += 45) ctx.fillRect(i, 0, 8, 195);
+      var g = ctx.createLinearGradient(0, 195, 0, 720);
+      g.addColorStop(0, '#4d7c0f'); g.addColorStop(1, '#365314');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 195, canvas.width, 525);
+    }
+
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(0, 192, canvas.width, 10);
+    ctx.fillRect(0, 645, canvas.width, 10);
+    ctx.fillStyle = '#78350f';
+    for (var x = 12; x < canvas.width; x += 36) {
+      ctx.fillRect(x, 182, 10, 26);
+      ctx.fillRect(x, 636, 10, 26);
+    }
+
+    grasses.forEach(function (gr) {
+      ctx.fillStyle = '#bef264';
+      ctx.beginPath(); ctx.arc(gr.x, gr.y, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#15803d'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(gr.x, gr.y); ctx.lineTo(gr.x - 4, gr.y - 8);
+      ctx.moveTo(gr.x, gr.y); ctx.lineTo(gr.x + 4, gr.y - 8);
+      ctx.stroke();
+    });
+
+    lambs.forEach(function (l) {
+      l.x += (l.parent.x - 24 - l.x) * 0.04;
+      l.y += (l.parent.y + 14 - l.y) * 0.04;
+      drawAnimal(l.x, l.y, 0.62, '#ffffff', '#1f2937', l.parent.owner + ' Kuzusu', null, false);
+    });
+
+    sheepList.forEach(function (s) {
+      if (grasses.length) {
+        var nearest = grasses[0], min = Infinity;
+        grasses.forEach(function (gr) {
+          var d = Math.hypot(gr.x - s.x, gr.y - s.y);
+          if (d < min) { min = d; nearest = gr; }
+        });
+        if (min < 12) {
+          var idx = grasses.indexOf(nearest);
+          if (idx > -1) grasses.splice(idx, 1);
+          s.growth += nearest.value;
+          checkBirth(s);
           updateHUD();
-          return;
+        } else {
+          s.x += ((nearest.x - s.x) / min) * 1.35;
+          s.y += ((nearest.y - s.y) / min) * 1.35;
         }
-        const sheep = {
-          id: Date.now() + Math.random(),
-          owner: cleanName,
-          x: 60 + Math.random() * 285,
-          y: 230 + Math.random() * 380,
-          vx: (Math.random() - 0.5) * 1.6,
-          vy: (Math.random() - 0.5) * 1.2,
-          growth: 20,
-          babies: 0,
-          color: '#fffbeb'
-        };
-        sheepList.push(sheep);
-        showBanner(`🎉 Hoş geldin @${cleanName}, koyunun ahıra girdi!`);
-        speakText(`Hoş geldin ${cleanName}, koyunun ahıra katıldı!`);
-        updateHUD();
+      } else {
+        s.x += s.vx; s.y += s.vy;
+        if (s.x < 35 || s.x > 370) s.vx *= -1;
+        if (s.y < 225 || s.y > 620) s.vy *= -1;
       }
+      var scale = 0.85 + Math.min(100, s.growth) * 0.004;
+      drawAnimal(s.x, s.y, scale, s.color, '#1f2937', '@' + s.owner, s.growth, false);
+    });
 
-      function dropGrass(count = 4) {
-        totalLikes += count;
-        for (let i = 0; i < count; i++) {
-          grasses.push({
-            x: 35 + Math.random() * 335,
-            y: 220 + Math.random() * 410,
-            value: 14 * speedMultiplier
-          });
-        }
-        updateHUD();
-      }
+    ram.x += ram.vx; ram.y += ram.vy;
+    if (ram.x < 45 || ram.x > 360) ram.vx *= -1;
+    if (ram.y < 235 || ram.y > 610) ram.vy *= -1;
+    drawAnimal(ram.x, ram.y, 1.32, '#fef3c7', '#451a03', '👑 ' + ram.name, null, true);
 
-      function checkBirth(sheep) {
-        if (sheep.growth >= 100) {
-          sheep.growth = 25;
-          sheep.babies += 1;
-          lambs.push({
-            parent: sheep,
-            x: sheep.x - 18,
-            y: sheep.y + 12
-          });
-          showBanner(`🍼 @${sheep.owner} adlı oyuncunun koyunu DOĞUM YAPTI! (+1 Kuzu)`);
-          speakText(`Tebrikler ${sheep.owner}, koyunun doğum yaptı ve bir kuzun oldu!`);
-        }
-      }
+    requestAnimationFrame(drawBarn);
+  }
 
-      function feedWithGift(username, boost = 45) {
-        const cleanName = (username || '').trim().replace(/^@/, '');
-        let target = sheepList.find(s => s.owner.toLowerCase() === cleanName.toLowerCase());
-        if (!target && sheepList.length > 0) {
-          target = sheepList[Math.floor(Math.random() * sheepList.length)];
-        }
-        if (!target) {
-          addSheep(cleanName || 'HediyeSever');
-          target = sheepList[sheepList.length - 1];
-        }
-        target.growth += boost * speedMultiplier;
-        showBanner(`🎁 @${target.owner} hediye ile koyununu büyüttü! (%${Math.min(100, Math.round(target.growth))})`);
-        checkBirth(target);
-        updateHUD();
-      }
+  // ---- TikFinity WebSocket ----
+  function setStatus(t) { $('wsStatus').textContent = 'Durum: ' + t; }
 
-      function claimRam(username, customRamName) {
-        const cleanName = (username || 'KralOyuncu').trim().replace(/^@/, '');
-        ram.owner = cleanName;
-        ram.hasOwner = true;
-        ram.name = customRamName || `${cleanName}'in Koçu`;
-        speedMultiplier = 2;
-        showBanner(`👑 @${cleanName} ERKEK KOÇU SAHİPLENDİ! Yeni adı: ${ram.name} (2x Hız)`);
-        speakText(`Muhteşem! ${cleanName} erkek koça kendi adını verdi. Tüm ahır artık iki kat hızlı büyüyor!`);
-        updateHUD();
-      }
+  function handleEvent(msg) {
+    var ev = msg.event, d = msg.data || {};
+    var user = d.uniqueId || d.nickname || 'Misafir';
+    if (ev === 'chat') {
+      var text = String(d.comment || '').trim();
+      var low = text.toLocaleLowerCase('tr-TR');
+      if (low === 'katıl' || low === 'katil') addSheep(user);
+      else if (low === 'aslan' || low === 'taç' || low === 'tac') claimRam(user);
+      else if (low.indexOf('isim ') === 0) claimRam(user, text.slice(5, 30));
+    } else if (ev === 'like') {
+      dropGrass(Math.min(Number(d.likeCount) || 1, 20));
+    } else if (ev === 'gift') {
+      if (d.giftType === 1 && d.repeatEnd === false) return;
+      feedWithGift(user, 45);
+    } else if (ev === 'follow' || ev === 'share') {
+      addSheep(user);
+    }
+  }
 
-      function drawBarn() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+  function connectWs() {
+    var url = wsUrlInput.value.trim() || 'ws://localhost:21213/';
+    try { if (socket) socket.close(); } catch (e) {}
+    setStatus('Bağlanıyor...');
+    try {
+      socket = new WebSocket(url);
+    } catch (e) {
+      setStatus('Geçersiz adres');
+      return;
+    }
+    socket.onopen = function () { setStatus('Bağlandı ✅'); };
+    socket.onclose = function () { setStatus('Bağlantı kapandı'); };
+    socket.onerror = function () { setStatus('Hata: TikFinity açık mı?'); };
+    socket.onmessage = function (e) {
+      try { handleEvent(JSON.parse(e.data)); } catch (err) {}
+    };
+  }
 
-        if (!paramTransparent) {
-          ctx.fillStyle = '#5c2d12';
-          ctx.fillRect(0, 0, canvas.width, 195);
+  // ---- Buttons ----
+  $('gearBtn').addEventListener('click', function () {
+    refreshGeneratedUrl();
+    $('settingsPanel').classList.toggle('open');
+  });
+  $('closeSettingsBtn').addEventListener('click', function () { $('settingsPanel').classList.remove('open'); });
+  $('wsConnectBtn').addEventListener('click', connectWs);
+  wsUrlInput.addEventListener('input', refreshGeneratedUrl);
 
-          ctx.fillStyle = '#3e1d0b';
-          for (let i = 0; i < canvas.width; i += 45) {
-            ctx.fillRect(i, 0, 8, 195);
-          }
+  $('customJoinBtn').addEventListener('click', function () {
+    var inp = $('customUserInput');
+    addSheep(inp.value.trim() || sampleNames[sampleIndex++ % sampleNames.length]);
+    inp.value = '';
+  });
+  $('toggleSoundBtn').addEventListener('click', function () {
+    soundEnabled = !soundEnabled;
+    this.textContent = soundEnabled ? '🔊 Ses: AÇIK' : '🔇 Ses: KAPALI';
+    if (!soundEnabled && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+  });
+  $('resetBarnBtn').addEventListener('click', function () {
+    sheepList.length = 0; grasses.length = 0; lambs.length = 0;
+    totalLikes = 0; speedMultiplier = 1;
+    ram.name = paramRamName; ram.owner = 'Sahipsiz'; ram.hasOwner = false;
+    updateHUD();
+    showBanner('Ahır sıfırlandı!');
+  });
+  $('copyOverlayUrlBtn').addEventListener('click', function () {
+    var url = buildOverlayUrl(), btn = this;
+    var done = function () {
+      btn.textContent = '✅ Kopyalandı!';
+      setTimeout(function () { btn.textContent = "🔗 Yayın Bağlantı URL'sini Kopyala"; }, 1800);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, function () { window.prompt('URL:', url); });
+    } else {
+      window.prompt('URL:', url);
+    }
+  });
 
-          const grassGrad = ctx.createLinearGradient(0, 195, 0, 720);
-          grassGrad.addColorStop(0, '#4d7c0f');
-          grassGrad.addColorStop(1, '#365314');
-          ctx.fillStyle = grassGrad;
-          ctx.fillRect(0, 195, canvas.width, 525);
-        }
+  $('btnTestJoin').addEventListener('click', function () { addSheep(sampleNames[sampleIndex++ % sampleNames.length]); });
+  $('btnTestLike').addEventListener('click', function () { dropGrass(6); });
+  $('btnTestGift').addEventListener('click', function () {
+    var name = sheepList.length ? sheepList[Math.floor(Math.random() * sheepList.length)].owner : '';
+    feedWithGift(name, 45);
+  });
+  $('btnTestRam').addEventListener('click', function () {
+    claimRam(sampleNames[sampleIndex++ % sampleNames.length], null);
+  });
 
-        ctx.fillStyle = '#92400e';
-        ctx.fillRect(0, 192, canvas.width, 10);
-        ctx.fillRect(0, 645, canvas.width, 10);
-        for (let x = 12; x < canvas.width; x += 36) {
-          ctx.fillStyle = '#78350f';
-          ctx.fillRect(x, 182, 10, 26);
-          ctx.fillRect(x, 636, 10, 26);
-        }
-
-        grasses.forEach(g => {
-          ctx.fillStyle = '#bef264';
-          ctx.beginPath();
-          ctx.arc(g.x, g.y, 5, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = '#15803d';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(g.x, g.y);
-          ctx.lineTo(g.x - 4, g.y - 8);
-          ctx.moveTo(g.x, g.y);
-          ctx.lineTo(g.x + 4, g.y - 8);
-          ctx.stroke();
-        });
-
-        lambs.forEach(l => {
-          l.x += (l.parent.x - 24 - l.x) * 0.04;
-          l.y += (l.parent.y + 14 - l.y) * 0.04;
-          drawAnimal(l.x, l.y, 0.62, '#ffffff', '#1f2937', `${l.parent.owner} Kuzusu`, null, false);
-        });
-
-        sheepList.forEach(s => {
-          if (grasses.length > 0) {
-            let nearest = grasses[0];
-            let minDist = Infinity;
-            grasses.forEach(g => {
-              const d = Math.hypot(g.x - s.x, g.y - s.y);
-              if (d < minDist) { minDist = d; nearest = g; }
-            });
-            if (minDist < 12) {
-              const idx = grasses.indexOf(nearest);
-              if (idx > -1) grasses.splice(idx, 1);
-              s.growth += nearest.value;
-              checkBirth(s);
-              updateHUD();
-            } else {
-              s.x += ((nearest.x - s.x) / minDist) * 1.35;
-              s.y += ((nearest.y - s.y) / minDist) * 1.35;
-            }
-          } else {
-            s.x += s.vx;
-            s.y += s.vy;
-            if (s.x < 35 || s.x > 370) s.vx *= -1;
-            if (s.y < 225 || s.y > 620) s.vy *= -1;
-          }
-
-          const scale = 0.85 + Math.min(100, s.growth) * 0.004;
-          drawAnimal(s.x, s.y, scale, s.color, '#1f2937', `@${s.owner}`, s.growth, false);
-        });
-
-        ram.x += ram.vx;
-        ram.y += ram.vy;
-        if (ram.x < 45 || ram.x > 360) ram.vx *= -1;
-        if (ram.y < 235 || ram.y > 610) ram.vy *= -1;
-        drawAnimal(ram.x, ram.y, 1.32, '#fef3c7', '#451a03', `👑 ${ram.name}`, null, true);
-
-        requestAnimationFrame(drawBarn);
-      }
-
-      function drawAnimal(x, y, scale, woolColor, headColor, label, growth, isRam) {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.scale(scale, scale);
-
-        ctx.fillStyle = 'rgba(0,0,0,0.25)';
-        ctx.beginPath();
-        ctx.ellipse(0, 18, 22, 7, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = headColor;
-        ctx.fillRect(-13, 10, 4, 10);
-        ctx.fillRect(-4, 10, 4, 10);
-        ctx.fillRect(6, 10, 4, 10);
-        ctx.fillRect(13, 10, 4, 10);
-
-        ctx.fillStyle = woolColor;
-        ctx.beginPath();
-        ctx.arc(-8, 0, 13, 0, Math.PI * 2);
-        ctx.arc(4, -2, 15, 0, Math.PI * 2);
-        ctx.arc(13, 2, 11, 0, Math.PI * 2);
-        ctx.arc(0, 6, 13, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = headColor;
-        ctx.beginPath();
-        ctx.ellipse(19, -3, 8, 7, 0.2, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(21, -5, 2, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (isRam) {
-          ctx.strokeStyle = '#d97706';
-          ctx.lineWidth = 3.5;
-          ctx.beginPath();
-          ctx.arc(15, -9, 7, Math.PI * 0.8,
+  refreshGeneratedUrl();
+  updateHUD();
+  drawBarn();
+  if (paramAutoWs) connectWs();
+});
+</script>
+</body>
+</html>
